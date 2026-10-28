@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lo que el río sabe</title>
+<meta name="description" content="Cómic interactivo en formato cuadernillo sobre inteligencia artificial y educación, ambientado en Montería.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--desk:#2a2420;--desk2:#3b322b;--paper:#fbf6ea;--ink:#1d1a16;--muted:#5d554a;--accent:#c4512b;--river:#2d6f8f;--bubble:#fffdf8;--ia:#e8f3fb;--ia-ink:#123a52;--cap:#f7e38a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--desk:#141110;--desk2:#211c18}}
+:root[data-theme="dark"]{--desk:#141110;--desk2:#211c18}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;overflow:hidden;background:radial-gradient(ellipse at center,var(--desk2),var(--desk));color:var(--ink);font:16px/1.4 "Comic Neue",system-ui,sans-serif}
+.toolbar{position:fixed;inset:0 0 auto 0;height:52px;z-index:20;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:0 14px;background:rgba(20,17,15,.85);color:#f3ead8}
+.toolbar .t{font:400 22px Bangers,cursive;letter-spacing:1px}
+.toolbar .ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.toolbar button{font:700 14px "Comic Neue";background:#f3ead8;color:#1d1a16;border:2px solid #1d1a16;border-radius:9px;padding:5px 9px;cursor:pointer}
+.toolbar button[aria-pressed=true]{background:var(--accent);color:#fff}
+.vol{display:flex;align-items:center;gap:4px;font-size:13px}
+#pg{font-size:13px;min-width:92px;text-align:center}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #7cc0e0;outline-offset:2px}
+.stage{position:fixed;inset:52px 0 0 0;display:grid;place-items:center;perspective:2600px}
+.book{position:relative;transition:transform .8s ease}
+.nav{position:fixed;top:50%;z-index:15;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:3px solid #f3ead8;background:rgba(0,0,0,.45);color:#f3ead8;font:700 22px sans-serif;cursor:pointer}
+.nav:disabled{opacity:.25;cursor:default}
+#prev{left:10px}#next{right:10px}
+/* Hojas (modo doble página) */
+.sheet{position:absolute;top:0;left:50%;width:50%;height:100%;transform-origin:left center;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.45,.05,.3,1)}
+.sheet.flipped{transform:rotateY(-180deg)}
+.face{position:absolute;inset:0;overflow:hidden;transition:visibility 0s .45s}
+.sheet.flipped .face.front,.sheet:not(.flipped) .face.back{visibility:hidden}
+.face.back{transform:rotateY(180deg)}
+/* Modo una página */
+.book.single .sheet{display:none}
+.single-host{position:absolute;inset:0;display:none}
+.book.single .single-host{display:block}
+.single-host .page{animation:turn .55s ease}
+@keyframes turn{from{transform:rotateY(-70deg);opacity:0;transform-origin:left center}to{transform:none;opacity:1}}
+/* Página */
+.page{position:absolute;inset:0;background:var(--paper);container-type:size;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.face.front .page{box-shadow:inset 18px 0 22px -16px rgba(0,0,0,.35)}
+.face.back .page{box-shadow:inset -18px 0 22px -16px rgba(0,0,0,.35)}
+.single-host .page{box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.pnum{position:absolute;bottom:1.6cqh;left:0;right:0;text-align:center;font:400 2.6cqw Bangers,cursive;color:var(--muted)}
+.inner{position:absolute;inset:4cqw 4.5cqw 6cqh}
+.inner.scene{display:flex;flex-direction:column;justify-content:center}
+/* Escena */
+.scene h2{font:400 5.4cqw/1 Bangers,cursive;letter-spacing:.06em;margin:0 0 1.2cqh}
+.scene h2 span{color:var(--accent)}
+.caption{margin:0 0 1.6cqh;background:var(--cap);border:.5cqw solid #1d1a16;padding:.9cqw 1.6cqw;font-weight:700;font-size:2.55cqw;box-shadow:.7cqw .7cqw 0 #1d1a16}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4cqw}
+.grid .panel.a{grid-column:1/-1}
+.grid.solo-b .panel.b{grid-column:1/-1;width:60%;justify-self:center}
+.panel{position:relative;border:.6cqw solid var(--ink);border-radius:.6cqw;overflow:hidden;background:#000;aspect-ratio:3/2;cursor:pointer;container-type:inline-size}
+.panel img{display:block;width:100%;height:100%;object-fit:cover}
+.panel.miss{display:none}
+.corner{position:absolute;display:flex;flex-direction:column;gap:1.2cqw;max-width:46%;z-index:2;pointer-events:none}
+.c-tl{left:2%;top:3%;align-items:flex-start}.c-tr{right:2%;top:3%;align-items:flex-end}
+.c-bl{left:2%;bottom:4%;align-items:flex-start;flex-direction:column-reverse}.c-br{right:2%;bottom:4%;align-items:flex-end;flex-direction:column-reverse}
+.panel.b .corner,.panel.c .corner{max-width:44%}
+.say{background:var(--bubble);color:#1d1a16;border:.45cqw solid #1d1a16;border-radius:2.6cqw;padding:.9cqw 1.8cqw;font-size:max(9px,2.7cqw);line-height:1.22;box-shadow:.3cqw .45cqw 0 rgba(0,0,0,.35);pointer-events:auto;margin:0;
+  opacity:0;transform:scale(.96);transition:.25s}
+.panel.b .say,.panel.c .say{font-size:max(9px,4.5cqw);border-width:.7cqw}
+.say[hidden]{display:none}
+.say.show{opacity:1;transform:none}
+.say.now{outline:.5cqw solid var(--accent);outline-offset:.3cqw}
+.say b{font-family:Bangers,cursive;font-weight:400;letter-spacing:.05em;font-size:1.1em;margin-right:.4em}
+.say.ia{background:var(--ia);color:var(--ia-ink);border-radius:.8cqw;font-family:"IBM Plex Mono",monospace;border-style:dashed}
+.say .acot{color:#5d554a;font-style:italic}
+.row{display:flex;flex-wrap:wrap;gap:1.4cqw;align-items:center;margin-top:1.6cqh}
+.pbtn{font:700 2.4cqw "Comic Neue";border:.4cqw solid var(--ink);background:var(--accent);color:#fff;padding:.7cqw 1.6cqw;border-radius:1.4cqw;cursor:pointer;box-shadow:.4cqw .4cqw 0 var(--ink);text-decoration:none}
+.pbtn.alt{background:#fff;color:var(--ink)}
+.hot{position:absolute;border:3px dashed #fff;background:rgba(255,255,255,.12);cursor:pointer;border-radius:4px;animation:pulse 1.6s infinite;z-index:3}
+@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(255,255,255,.25)}}
+.pop{position:absolute;left:5%;right:5%;bottom:9cqh;z-index:6;display:none;background:#fff;border:.5cqw solid var(--accent);border-radius:1.6cqw;padding:1.6cqw 2.2cqw;font-size:2.5cqw;box-shadow:0 1cqw 3cqw rgba(0,0,0,.35)}
+.pop.open{display:block}.pop p{margin:.6em 0}
+.pop mark{background:#ffd2c2;text-decoration:underline wavy #c4512b}
+.pop .x{position:absolute;right:1cqw;top:.6cqw;border:0;background:none;font-size:3.4cqw;cursor:pointer}
+/* Portada, finales */
+.bleed{position:absolute;inset:0}.bleed img{width:100%;height:100%;object-fit:cover;display:block}
+.cover-t{position:absolute;left:0;right:0;top:6cqh;text-align:center;color:#fff;padding:0 6cqw}
+.cover-t .k{font:700 2.6cqw "Comic Neue";letter-spacing:.3em;text-transform:uppercase;text-shadow:0 2px 6px #000}
+.cover-t h1{font:400 13cqw/.9 Bangers,cursive;letter-spacing:.04em;margin:1.5cqh 0;text-shadow:.6cqw .6cqw 0 #000,0 0 3cqw rgba(0,0,0,.5)}
+.cover-t p{font-size:3.1cqw;font-weight:700;text-shadow:0 2px 6px #000;margin:0}
+.cover-b{position:absolute;left:0;right:0;bottom:4cqh;text-align:center;color:#fff;font-size:2.4cqw;text-shadow:0 2px 6px #000}
+.textpage h2{font:400 6cqw Bangers,cursive;margin:0 0 2cqh;color:var(--accent)}
+.textpage p,.textpage li{font-size:2.75cqw;margin:0 0 1.4cqh}
+.textpage ul{padding-left:4cqw;margin:0 0 2cqh}
+.textpage .small{font-size:2.2cqw;color:var(--muted)}
+.back-t{position:absolute;left:8cqw;right:8cqw;top:30cqh;background:rgba(251,246,234,.92);border:.5cqw solid #1d1a16;padding:3cqw;font-size:2.8cqw;box-shadow:1cqw 1cqw 0 #1d1a16}
+.back-t h3{font:400 5cqw Bangers,cursive;margin:0 0 1.5cqh}
+.fin-t{position:absolute;left:0;right:0;top:7cqh;text-align:center;color:#fff}
+.fin-t h2{font:400 16cqw/1 Bangers,cursive;margin:0;text-shadow:.6cqw .6cqw 0 #000}
+.fin-t p{font-size:3.3cqw;font-weight:700;text-shadow:0 2px 6px #000;margin:1cqh 6cqw}
+.ask-t{position:absolute;left:6cqw;right:6cqw;top:6cqh;text-align:center}
+.ask-t .say{display:inline-block;opacity:1;transform:none;font-size:3.6cqw}
+.ask-box{position:absolute;left:8cqw;right:8cqw;bottom:12cqh;text-align:center}
+.ask-box label{display:block;color:#fff;font:400 5.5cqw Bangers,cursive;text-shadow:.4cqw .4cqw 0 #000}
+.ask-box input{width:100%;font:700 3.2cqw "Comic Neue";padding:1.4cqw 2cqw;border:.5cqw solid #1d1a16;border-radius:2cqw}
+.ask-box output{display:block;margin-top:2cqh;color:#fff;font:700 4.2cqw "Comic Neue";text-shadow:0 2px 6px #000;min-height:1.4em}
+@media (prefers-reduced-motion:reduce){.sheet,.book,.say{transition:none}.single-host .page{animation:none}.hot{animation:none}}
+@media (max-width:640px){.toolbar .t{display:none}.vol{display:none}#all{display:none}.toolbar button{font-size:12px;padding:4px 7px}.nav{top:auto;bottom:10px;transform:none;width:40px;height:40px;font-size:18px}.stage{bottom:60px}}
+</style>
+</head>
+<body>
+<div class="toolbar" role="toolbar" aria-label="Controles">
+  <span class="t">Lo que el río sabe</span>
+  <span class="ctl">
+    <button id="sound" aria-pressed="false">🔇 Sonido</button>
+    <label class="vol">Vol. <input id="vol" type="range" min="0" max="1" step="0.05" value="0.5" aria-label="Volumen"></label>
+    <button id="auto" aria-pressed="false">▶ Lectura automática</button>
+    <button id="all">Mostrar diálogos</button>
+    <span id="pg" aria-live="polite"></span>
+  </span>
+</div>
+<main class="stage" aria-label="Cuadernillo">
+  <div class="book" id="book"><div class="single-host" id="single"></div></div>
+</main>
+<button class="nav" id="prev" aria-label="Página anterior">◀</button>
+<button class="nav" id="next" aria-label="Página siguiente">▶</button>
+
+<script>
+const S=[
+ {t:"El caño huele mal",n:"En Montería el calor llega temprano. Y con el calor, ese olor que todo el barrio conoce y nadie nombra.",
+  alt:"Desde un puente, la profe Mariana, Yeimi y Andrés se tapan la nariz frente a un caño lleno de plásticos entre casas de zinc.",altb:"Primer plano de la mano de Yeimi grabando el caño con el celular: botellas y juncos en el agua.",altc:"Andrés, apoyado en la baranda del puente, mira el caño con tristeza; Mariana a su lado.",
+  amb:"barrio",d:[["YEIMI","¡Profe, esto huele a muerto!"],["ANDRÉS","Antes aquí bajaban bocachicos. Mi abuelo dice."],["MARIANA","Entonces ya tenemos pregunta para el trimestre. ¿Qué le pasó a nuestro caño?"],["YEIMI","Uy, eso suena a mucho trabajo…","bajito"]]},
+ {t:"El informe en diez segundos",n:"Esa noche nadie investigó. Al otro día, Yeimi llegó con todo hecho.",
+  alt:"Yeimi sostiene una tableta con funda gris; sus compañeros se asoman por encima de su hombro, asombrados.",altb:"Por encima del hombro de Yeimi se ve en la tableta un chat con una respuesta muy larga.",altc:"Una compañera se tapa la boca de asombro junto a un compañero con los ojos muy abiertos.",
+  amb:"aula",d:[["YEIMI","Diez segundos. Introducción, causas, cifras, conclusiones. Hasta bibliografía."],["COMPAÑERA","¡Mentira! ¿Y eso lo hiciste tú?"],["YEIMI","Yo hice la pregunta. Eso cuenta, ¿no?"],["IA","Aquí tienes un informe completo sobre la contaminación del caño.",null,1]]},
+ {t:"El dato inventado",n:"El informe sonaba perfecto. Demasiado perfecto.",
+  alt:"Andrés señala, en el chat proyectado en el telón, un mensaje marcado en rojo con un triángulo de advertencia. Yeimi se lleva la mano a la frente.",altb:"Primer plano de Andrés, ceño fruncido, señalando la pantalla; luz azul fría en un lado de la cara.",altc:"Primer plano del chat proyectado: un mensaje resaltado con borde rojo y un triángulo de advertencia.",
+  amb:"aula",hot:{x:74,y:20,w:16,h:12,label:"Toca el mensaje marcado en rojo que señala Andrés"},
+  d:[["MARIANA","Léenos la parte de las causas, Yeimi."],["YEIMI","«Según la Secretaría Ambiental, el 87 % de la contaminación del caño proviene del barrio Villa Esmeralda…»","leyendo"],["ANDRÉS","Pará ahí. Yo vivo a dos cuadras. Aquí no hay ningún barrio Villa Esmeralda."],["YEIMI","…No puede ser."],["ANDRÉS","¿Y ese 87 % de dónde salió? ¿Quién lo midió?"],["IA","No dispongo de una fuente verificable para ese dato.",null,1]]},
+ {t:"¿Prohibir o aprender?",n:"El salón se partió en dos.",
+  alt:"Vista desde arriba de un aula dividida en dos grupos que discuten; la profe Mariana, en el centro, piensa con la mano en el mentón; la tableta está boca abajo en su escritorio.",altb:"Yeimi, sentada, baja la mirada avergonzada con el celular en el regazo.",altc:"Mariana levanta la mano abierta para calmar al curso; en primer plano, la tableta boca abajo sobre el escritorio.",
+  amb:"debate",d:[["ESTUDIANTE 1","¡Que la prohíban! Eso es pura trampa."],["ESTUDIANTE 2","¿Y entonces el celular también? ¿E internet?"],["YEIMI","Yo no quise hacer trampa… solo creí que era verdad."],["ANDRÉS","El problema no es la máquina. Es que nadie fue al caño."],["MARIANA","No la vamos a prohibir. La vamos a poner a trabajar para nosotros, no al revés. Pero primero… vamos a preguntarle al río."]]},
+ {t:"El río también habla",n:"Hay cosas que no están en internet. Están en la memoria de la gente.",
+  alt:"Al atardecer, a orillas del Sinú, don Aurelio, con sombrero vueltiao y atarraya, cuenta una historia sentado en una canoa; Andrés toma notas, Yeimi graba y Mariana escucha.",altb:"Las manos curtidas de don Aurelio sostienen la atarraya a contraluz dorado.",altc:"Desde detrás del sombrero de don Aurelio: Yeimi lo graba con el celular y Andrés toma notas entre los bambúes.",
+  amb:"rio",audio:1,d:[["DON AURELIO","Cuando yo era pelao, el caño bajaba claro. Uno metía la atarraya y salía llena."],["ANDRÉS","¿Y cuándo empezó a cambiar, abuelo?"],["DON AURELIO","Cuando la gente le dio la espalda. Cuando el caño se volvió el patio de atrás de todo el mundo."],["YEIMI","¿Me deja grabarlo, don Aurelio? Para el trabajo."],["DON AURELIO","Grabe, mija. Pero escriba también lo que no digo: mire el agua.","riendo"],["MARIANA","Esto ninguna máquina te lo iba a dar.","a Yeimi"]]},
+ {t:"Preguntar mejor",n:"Volvieron a la IA. Pero esta vez llegaron con preguntas propias.",
+  alt:"Yeimi y Andrés trabajan juntos en un pupitre con fotos del caño, un mapa dibujado a mano y una tableta pequeña.",altb:"Vista cenital del pupitre: fotos impresas del caño, un mapa a mano, un cuaderno con bocetos y la tableta con el chat abierto.",altc:"Primer plano de las manos de Yeimi escribiendo en la tableta con el chat abierto; a su lado, el dedo de Andrés señala una foto impresa del caño.",
+  amb:"aula",d:[["YEIMI","«Tengo estas fotos y esta entrevista. Ayúdame a ordenarlas por fechas y dime qué información me falta.»","escribiendo"],["IA","Faltan datos oficiales sobre la calidad del agua. Te sugiero consultar fuentes institucionales y citarlas.",null,1],["ANDRÉS","Eso sí sirve. Mira: aquí está el tubo que vimos."],["YEIMI","Y no puse nada que no podamos comprobar. Esta vez la que decide soy yo."]]},
+ {t:"Contarlo en muchos medios",n:"Una sola historia no cabía en un solo formato. Así que la contaron en varios.",
+  alt:"En un patio cubierto trabajan tres grupos: Andrés graba un podcast, otros dibujan un gran mapa del caño y Yeimi bocetea viñetas; la profe Mariana pasa entre ellos.",altb:"Primer plano de un micrófono y audífonos junto a un portátil con una onda de sonido azul.",altc:"Yeimi dibuja la primera viñeta del cómic: el puente sobre el caño.",
+  amb:"aula",links:1,d:[["ESTUDIANTE","Bienvenidos a «Aprender entre pantallas», episodio uno…","al micrófono"],["ANDRÉS","Aquí va la casa de mi abuelo. Y aquí el tubo."],["YEIMI","¿Y si el cómic empieza con el olor? Así empezó todo."],["MARIANA","Cada medio cuenta una parte. Juntos cuentan el caño entero."]]},
+ {t:"Lo que el río sabe",n:"La IA les ayudó a ordenar. El río, a entender. Y ellos aprendieron a preguntar.",
+  alt:"Siluetas de Mariana, Yeimi, Andrés y don Aurelio de espaldas, en la orilla del Sinú, frente a un atardecer naranja.",altb:"Don Aurelio y Andrés de pie en la orilla al atardecer; el abuelo apoya la mano en el hombro del nieto.",altc:"El río Sinú al atardecer, garzas volando y una canoa de madera, sin personas.",
+  amb:"rio",ask:1,d:[["ANDRÉS","¿Usted cree que el caño vuelva a bajar claro, abuelo?"],["DON AURELIO","Si ustedes lo siguen mirando, puede ser."],["YEIMI","Y si lo seguimos contando."],["MARIANA","¿Y tú qué le preguntarías al río?","mirando al lector"]]}
+];
+const POS={1:[['b','tr'],['c','br'],['a','tr'],['a','br']],2:[['a','bl'],['c','bl'],['a','br'],['b','tr']],3:[['a','tl'],['c','tl'],['b','bl'],['a','bl'],['b','br'],['c','br']],4:[['a','tl'],['a','tr'],['b','bl'],['a','br'],['a','bl']],5:[['a','tl'],['b','tr'],['b','tl'],['c','br'],['b','br'],['a','br']],6:[['a','bl'],['b','tl'],['a','br'],['c','br']],7:[['b','bl'],['a','tl'],['c','br'],['a','tr']],8:[['a','tl'],['b','tr'],['a','tr'],['c','tr']]};
+const EXP={1:['asco','hmm','','suspiro'],2:['risa','asombro','hmm','ping'],3:['','','eh','asombro','hmm','error'],4:['eh','oh','suspiro','hmm',''],5:['hmm','','suspiro','','risa',''],6:['','ping','asombro','hmm'],7:['','','asombro','risa'],8:['','hmm','','']};
+
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const PAGES=[];
+function mk(html,amb,cls){const p=document.createElement('section');p.className='page '+(cls||'');p.dataset.amb=amb||'';p.innerHTML=html;PAGES.push(p);return p}
+
+/* 1 · Portada */
+mk(`<div class="bleed"><img src="img/portada.jpg" alt="Yeimi y Andrés frente al río Sinú al atardecer; en el reflejo del agua aparecen fragmentos de un chat."></div>
+<div class="cover-t"><div class="k">Cómic transmedia</div><h1>Lo que el río sabe</h1><p>Una historia sobre inteligencia artificial, escuela y territorio en Montería</p></div>
+<div class="cover-b">Maestría · Universidad de Córdoba · 2026</div>`,'rio','cover');
+
+/* 2 · Presentación (interior de portada) */
+mk(`<div class="inner textpage"><h2>Antes de empezar</h2>
+<p>En un colegio público de Montería, un curso investiga por qué el caño de su barrio está contaminado. La IA les entrega un informe perfecto… con un dato inventado.</p>
+<ul><li><b>Pasa las páginas</b> con las flechas ◀ ▶, el teclado o deslizando el dedo.</li>
+<li><b>Toca cada viñeta</b> para que aparezcan los diálogos, o usa <b>Lectura automática</b>.</li>
+<li><b>Activa el sonido</b> 🔊 para escuchar el ambiente y las reacciones de los personajes.</li>
+<li>En la escena 3 hay un <b>dato por descubrir</b>, y al final una <b>pregunta</b> que te toca a ti.</li></ul>
+<p class="small">Personajes: Profe Mariana · Yeimi · Andrés · Don Aurelio · y la IA, que vive en una tableta del colegio.</p></div><div class="pnum">2</div>`,'barrio');
+
+/* 3–10 · Escenas */
+const scenes=[];
+S.forEach((s,i)=>{const n=i+1,solo=n===8;
+  let h=`<div class="inner scene"><h2><span>${n}</span> · ${s.t}</h2><p class="caption">${s.n}</p><div class="grid${solo?' solo-b':''}"><div class="panel a"><img src="img/e${n}a.jpg" alt="${esc(s.alt)}" width="1400" height="933">`;
+  if(s.hot)h+=`<button class="hot" style="left:${s.hot.x}%;top:${s.hot.y}%;width:${s.hot.w}%;height:${s.hot.h}%" aria-label="${s.hot.label}"></button>`;
+  h+=`</div>`+(solo?['b']:['b','c']).map(x=>`<div class="panel ${x}"><img src="img/e${n}${x}.jpg" alt="${esc(s['alt'+x]||'')}" width="900" height="600" onerror="this.parentNode.classList.add('miss')"></div>`).join('')+`</div>`;
+  h+=`<div class="row"><button class="pbtn next">Siguiente diálogo ▸</button>`;
+  if(s.audio)h+=`<button class="pbtn alt" id="river" aria-pressed="false">▶ Escuchar al río</button><button class="pbtn alt" id="trx">Transcripción</button>`;
+  if(s.links)h+=`<a class="pbtn alt" href="https://danielfer31.github.io/aprender-entre-pantallas/" target="_blank" rel="noopener">🎧 Podcast «Aprender entre pantallas»</a>`;
+  h+=`</div>`;
+  if(s.hot)h+=`<div class="pop" role="dialog" aria-label="Dato revelado"><button class="x" aria-label="Cerrar">✕</button><p>Lo que dijo la IA: «Según la Secretaría Ambiental, <mark>el 87 % de la contaminación del caño proviene del barrio Villa Esmeralda</mark>».</p><p><strong>⚠ Dato inventado.</strong> El barrio no existe y la cifra no tiene fuente. <strong>¿Cómo lo comprobarías?</strong> Busca la fuente original, pregunta a quien vive allí y compara con otra fuente.</p></div>`;
+  if(s.audio)h+=`<div class="pop trx" role="dialog" aria-label="Transcripción"><button class="x" aria-label="Cerrar">✕</button><p>[Río tranquilo, aves.] Don Aurelio: «Cuando yo era pelao, el caño bajaba claro. Uno metía la atarraya y salía llena… Cuando la gente le dio la espalda, el caño se volvió el patio de atrás de todo el mundo.»</p></div>`;
+  h+=`</div><div class="pnum">${n+2}</div>`;
+  const pg=mk(h,s.amb,'scenep');
+  pg.querySelectorAll('.panel').forEach(pn=>pn.insertAdjacentHTML('beforeend','<div class="corner c-tl"></div><div class="corner c-tr"></div><div class="corner c-bl"></div><div class="corner c-br"></div>'));
+  const dl=solo?s.d.slice(0,3):s.d;
+  const says=dl.map((d,j)=>{const [pn,c]=POS[n][j],e=document.createElement('p');e.className='say'+(d[3]?' ia':'');e.hidden=true;e.dataset.who=d[0];e.dataset.exp=(EXP[n]||[])[j]||'';
+    e.innerHTML=`<b>${d[0]}</b>${d[2]?`<span class="acot">(${d[2]}) </span>`:''}${d[1]}`;pg.querySelector(`.panel.${pn} .c-${c}`).appendChild(e);return e});
+  const nb=pg.querySelector('.next');let k=0;
+  const step=()=>{if(k<says.length){says.forEach(x=>x.classList.remove('now'));const e=says[k++];e.hidden=false;requestAnimationFrame(()=>e.classList.add('show','now'));expr(e.dataset.exp,e.dataset.who)}
+    if(k>=says.length)nb.textContent='Pasar página ▸'};
+  nb.onclick=()=>{if(k>=says.length){turn(1);return}step()};
+  pg.querySelectorAll('.panel img').forEach(im=>im.addEventListener('click',step));
+  pg._show=()=>{while(k<says.length)step()};pg._step=()=>{if(k>=says.length)return false;step();return true};
+  pg.querySelectorAll('.pop .x').forEach(b=>b.onclick=()=>b.parentNode.classList.remove('open'));
+  const hot=pg.querySelector('.hot');if(hot)hot.onclick=e=>{e.stopPropagation();pg.querySelector('.pop').classList.add('open')};
+  const trx=pg.querySelector('#trx');if(trx)trx.onclick=()=>pg.querySelector('.pop.trx').classList.toggle('open');
+  scenes.push(pg)});
+
+/* 11 · La pregunta al río (viñeta aparte) */
+mk(`<div class="bleed"><img src="img/e8c.jpg" alt="El río Sinú al atardecer, garzas volando y una canoa de madera, sin personas." style="object-position:center"></div>
+<div class="ask-t"><p class="say"><b>MARIANA</b><span class="acot">(mirando al lector) </span>¿Y tú qué le preguntarías al río?</p></div>
+<div class="ask-box"><label for="q">Escribe tu pregunta al río</label><input id="q" maxlength="140" placeholder="¿Qué le preguntarías?" autocomplete="off"><output for="q" aria-live="polite"></output></div>
+<div class="pnum" style="color:#fff">11</div>`,'rio','askp');
+
+/* 12 · Final */
+mk(`<div class="bleed"><img src="img/final.jpg" alt="De noche, Mariana, Yeimi, Andrés y don Aurelio sentados en la orilla del Sinú escuchan una grabación en el celular; luciérnagas sobre el agua."></div>
+<div class="fin-t"><h2>Fin</h2><p>La IA les ayudó a ordenar. El río, a entender. Y ellos aprendieron a preguntar.</p></div>`,'rio','finp');
+
+/* 13 · Créditos */
+mk(`<div class="inner textpage"><h2>Créditos</h2>
+<p><b>Historia, personajes, guion y prompts:</b> equipo del curso Transmedia y Contenidos Digitales en IA, Maestría, Universidad de Córdoba (2026).</p>
+<p><b>Ilustraciones:</b> generadas con IA (ChatGPT, vía Codex) a partir de fichas de personaje y prompts propios; cada viñeta fue revisada por el equipo.</p>
+<p class="small"><b>Sonidos:</b> Pixabay (licencia de contenido de Pixabay): «Calm River Ambience Loop», «Peaceful Morning Birds», «A gentle breeze wind 1», «Hmm reflexion male voice thinking», «Aha mhm mmm», «Girl soft laughing», «Sweet young woman laugh», «Old man laughing gradually», «Surprise scared girl gasp», «Gasp SFX», «Oh», «Female sigh», «Male sigh», «Eww»; recortados y normalizados por el equipo. Capas suaves sintetizadas en el navegador.</p>
+<p><b>Ficción:</b> el barrio Villa Esmeralda, el caño, la cifra del 87 % y los personajes son inventados. Montería y el río Sinú son reales.</p>
+<p><b>Privacidad:</b> la pregunta de la página 11 se queda en tu navegador; no se guarda ni se envía.</p>
+<p class="small">Jenkins, H. (2006). <i>Convergence culture</i>. NYU Press. · Scolari, C. A. (2013). <i>Narrativas transmedia: cuando todos los medios cuentan</i>. Deusto.</p></div><div class="pnum">13</div>`,'rio');
+
+/* 14 · Contraportada */
+mk(`<div class="bleed"><img src="img/contraportada.jpg" alt="Una canoa con atarraya, sombrero vueltiao y un cuaderno sobre el río Sinú al anochecer."></div>
+<div class="back-t"><h3>¿Quién le pregunta a quién?</h3><p>Un informe hecho en diez segundos parece una victoria, hasta que alguien del barrio lee el dato y dice: «aquí no existe ese barrio».</p><p>Entre una tableta del colegio y la memoria de un pescador del Sinú, Yeimi y Andrés descubren que aprender con IA empieza por saber preguntar.</p></div>
+<div class="cover-b">Lo que el río sabe · cómic transmedia</div>`,'rio','backp');
+
+/* ---------- Motor del cuadernillo ---------- */
+const book=document.getElementById('book'),single=document.getElementById('single'),N=PAGES.length;
+let pos=0,mode=null,sheets=[];   // pos = índice de la página de la derecha (doble) o página visible (simple)
+function size(){const W=innerWidth,H=innerHeight-52,dbl=W>=900&&W>H*1.05;
+  let ph=Math.min(H-(dbl?28:84),1100),pw=ph*0.78;const cols=dbl?2:1,maxw=W-(dbl?120:24);
+  if(pw*cols>maxw){pw=maxw/cols;ph=pw/0.78}
+  book.style.width=pw*cols+'px';book.style.height=ph+'px';return dbl}
+function build(){const dbl=size(),m=dbl?'double':'single';if(m===mode){place();return}mode=m;
+  sheets.forEach(s=>s.remove());sheets=[];single.innerHTML='';book.classList.toggle('single',!dbl);
+  if(dbl){for(let i=0;i<N;i+=2){const sh=document.createElement('div');sh.className='sheet';
+      const f=document.createElement('div');f.className='face front';f.appendChild(PAGES[i]);sh.appendChild(f);
+      if(PAGES[i+1]){const b=document.createElement('div');b.className='face back';b.appendChild(PAGES[i+1]);sh.appendChild(b)}
+      book.appendChild(sh);sheets.push(sh)}
+    pos=pos%2?pos+1:pos}
+  place()}
+function place(){
+  if(mode==='double'){const k=pos/2;sheets.forEach((s,i)=>{const fl=i<k;s.classList.toggle('flipped',fl);s.style.zIndex=fl?i+1:sheets.length-i});
+    const w=parseFloat(book.style.width);book.style.transform=pos===0?`translateX(${-w/4}px)`:pos>=N?`translateX(${w/4}px)`:'none'}
+  else{single.innerHTML='';if(PAGES[pos]){single.appendChild(PAGES[pos]);}}
+  const vis=visiblePages();pg.textContent=vis.length?'Pág. '+vis.map(i=>i+1).join('–')+' / '+N:'';
+  prev.disabled=pos<=0;next.disabled=mode==='double'?pos>=N:pos>=N-1;
+  const amb=(vis.map(i=>PAGES[i].dataset.amb).filter(Boolean).pop())||'barrio';setAmb(amb)}
+function visiblePages(){return mode==='double'?[pos-1,pos].filter(i=>i>=0&&i<N):[pos]}
+function turn(d){if(mode==='double'){pos=Math.max(0,Math.min(N,pos+2*d))}else{pos=Math.max(0,Math.min(N-1,pos+d))}place()}
+const prev=document.getElementById('prev'),next=document.getElementById('next'),pg=document.getElementById('pg');
+prev.onclick=()=>{stopAuto();turn(-1)};next.onclick=()=>{stopAuto();turn(1)};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowRight'){stopAuto();turn(1)}if(e.key==='ArrowLeft'){stopAuto();turn(-1)}});
+let tx=null;book.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+book.addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>60){stopAuto();turn(dx<0?1:-1)}tx=null});
+addEventListener('resize',build);
+const q=PAGES[10].querySelector('#q');q.oninput=()=>{q.parentNode.querySelector('output').textContent=q.value?'«'+q.value+'»':''};
+document.getElementById('all').onclick=()=>scenes.forEach(s=>s._show());
+
+/* Lectura automática: muestra los globos de las páginas visibles y pasa la página */
+const ab=document.getElementById('auto');let auto=null;
+const wait=ms=>new Promise(r=>auto.t=setTimeout(r,ms));
+async function play(){while(auto){const vis=visiblePages().map(i=>PAGES[i]);
+    for(const p of vis){if(!auto)return;if(p._step){while(auto&&p._step()){const e=p.querySelector('.say.now');await wait(1800+(e?e.textContent.length:20)*55)}}else await wait(3500)}
+    if(!auto)return;if(next.disabled){stopAuto();return}turn(1);await wait(1300)}}
+function stopAuto(){if(auto)clearTimeout(auto.t);auto=null;ab.setAttribute('aria-pressed','false');ab.textContent='▶ Lectura automática'}
+ab.onclick=()=>{if(auto){stopAuto();return}auto={};ab.setAttribute('aria-pressed','true');ab.textContent='⏸ Pausar lectura';play()};
+
+/* Sonido sintetizado (Web Audio). Nunca arranca solo. Ambiente suave de fondo + eventos esporádicos + expresiones. */
+let ctx,master,amb={},on=false,cur=null,visible='barrio',noiseBuf;
+const OUT={barrio:1,rio:1};
+const SND={},FILES=['amb_rio','amb_aves','amb_viento','hmm_h','hmm_m','risa_yeimi','risa_mariana','risa_aurelio','asombro_f','asombro_m','oh','suspiro_f','suspiro_m','asco'];
+function loadSamples(){FILES.forEach(f=>fetch('sonidos/'+f+'.mp3').then(r=>r.arrayBuffer()).then(b=>ctx.decodeAudioData(b)).then(a=>{SND[f]=a;if(f==='amb_rio'&&amb.rio)rioLoop()}).catch(()=>{}))}
+function playS(name,gain,offset,dur){const b=SND[name];if(!b)return false;const src=ctx.createBufferSource(),g=ctx.createGain(),t=ctx.currentTime;src.buffer=b;
+  const off=offset||0,d=dur||b.duration-off;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+.4*(dur?1:0)+.02);g.gain.setValueAtTime(gain,t+Math.max(.03,d-(dur?.8:.05)));g.gain.linearRampToValueAtTime(0,t+d);
+  src.connect(g).connect(master);src.start(t,off,d);return true}
+let rioSrc=null;
+function rioLoop(){if(rioSrc||!SND.amb_rio||!amb.rio)return;rioSrc=ctx.createBufferSource();rioSrc.buffer=SND.amb_rio;rioSrc.loop=true;const g=ctx.createGain();g.gain.value=.6;rioSrc.connect(g).connect(amb.rio);rioSrc.start()}
+function nz(){const s=ctx.createBufferSource();s.buffer=noiseBuf;s.loop=true;s.start();return s}
+function filt(type,f,q){const x=ctx.createBiquadFilter();x.type=type;x.frequency.value=f;if(q)x.Q.value=q;return x}
+function lfo(rate,depth,target){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=rate;g.gain.value=depth;o.connect(g).connect(target);o.start()}
+function layer(out,type,f,q,gain,mod){const g=ctx.createGain();g.gain.value=gain;nz().connect(filt(type,f,q)).connect(g).connect(out);if(mod)lfo(mod[0],mod[1],g.gain);return g}
+function make(t){const g=ctx.createGain();g.gain.value=0;g.connect(master);
+  if(t==='rio'){layer(g,'lowpass',300,0,.03,[.03,.01])}       // Sinú: ancho y lento
+  if(t==='barrio'){layer(g,'lowpass',450,0,.14,[.07,.05])}
+  if(t==='aula'){layer(g,'bandpass',320,1.2,.16,[2.6,.06]);layer(g,'bandpass',800,3,.05,[.3,.03])}       // ventilador + murmullo leve
+  if(t==='debate'){[380,760,1300].forEach((f,i)=>layer(g,'bandpass',f,2.5,.13,[1.4+i*1.1,.1]))}
+  return g}
+function env(g,t,a,peak,d){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.linearRampToValueAtTime(0,t+a+d)}
+function bird(){const t=ctx.currentTime,kind=Math.random(),n=kind<.5?2+(Math.random()*3|0):2;
+  for(let i=0;i<n;i++){const o=ctx.createOscillator(),g=ctx.createGain(),s=t+i*(kind<.5?.14:.32),f=kind<.5?2600+Math.random()*900:1700+Math.random()*300;
+    o.frequency.setValueAtTime(f,s);o.frequency.exponentialRampToValueAtTime(kind<.5?f*1.5:f*(i?0.8:1.25),s+(kind<.5?.07:.22));
+    env(g,s,.02,.025,kind<.5?.08:.22);o.connect(g).connect(master);o.start(s);o.stop(s+.35)}}
+function wind(){const t=ctx.currentTime,d=3+Math.random()*3,f=filt('bandpass',300,.7),g=ctx.createGain(),s=nz();
+  f.frequency.setValueAtTime(250,t);f.frequency.linearRampToValueAtTime(650,t+d/2);f.frequency.linearRampToValueAtTime(300,t+d);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.05,t+d/2);g.gain.linearRampToValueAtTime(0,t+d);s.connect(f).connect(g).connect(master);s.stop(t+d+.1)}
+function lap(){const t=ctx.currentTime,f=filt('bandpass',380+Math.random()*200,1.5),g=ctx.createGain(),s=nz();env(g,t,.05,.035,.35);s.connect(f).connect(g).connect(master);s.stop(t+.5)}
+function tick(){if(!on)return;const r=Math.random();
+  if(OUT[cur]&&r<.08){if(!playS('amb_aves',.5,Math.random()*15,4+Math.random()*3))bird()}
+  else if(OUT[cur]&&r<.12){if(!playS('amb_viento',.6,Math.random()*30,5+Math.random()*3))wind()}
+}
+function setAmb(t){visible=t;if(!ctx||!on)return;if(!amb[t])amb[t]=make(t);cur=t;if(t==='rio')rioLoop();Object.entries(amb).forEach(([k,g])=>g.gain.setTargetAtTime(k===t?1:0,ctx.currentTime,.8))}
+
+/* Expresiones no verbales (síntesis de formantes): hmm, risa, asombro, suspiro, asco… */
+const VOICE={'MARIANA':210,'YEIMI':265,'COMPAÑERA':290,'ANDRÉS':135,'DON AURELIO':115,'ESTUDIANTE':175,'ESTUDIANTE 1':180,'ESTUDIANTE 2':160};
+const VOW={a:[800,1200],e:[500,1800],o:[500,900],u:[320,800],m:[250,0]};
+function voice(t,f0,vow,dur,pitch,peak){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sawtooth';
+  o.frequency.setValueAtTime(f0*pitch[0],t);o.frequency.linearRampToValueAtTime(f0*pitch[1],t+dur);
+  const [f1,f2]=VOW[vow],mix=ctx.createGain();mix.gain.value=1;
+  if(f2){const b1=filt('bandpass',f1,6),b2=filt('bandpass',f2,8),g2=ctx.createGain();g2.gain.value=.5;o.connect(b1).connect(mix);o.connect(b2).connect(g2).connect(mix)}
+  else o.connect(filt('lowpass',f1+f0,1)).connect(mix);
+  mix.connect(g).connect(master);env(g,t,.04,peak,dur);o.start(t);o.stop(t+dur+.1)}
+function breath(t,dur,peak,f){const s=nz(),b=filt('bandpass',f||1400,.8),g=ctx.createGain();b.frequency.linearRampToValueAtTime((f||1400)*.6,t+dur);env(g,t,dur*.3,peak,dur*.7);s.connect(b).connect(g).connect(master);s.stop(t+dur+.1)}
+const FEM={'MARIANA':1,'YEIMI':1,'COMPAÑERA':1};
+function sample(type,who){const fem=FEM[who];
+  return {hmm:fem?'hmm_m':'hmm_h',risa:who==='YEIMI'?'risa_yeimi':who==='DON AURELIO'?'risa_aurelio':'risa_mariana',
+    asombro:fem?'asombro_f':'asombro_m',oh:'oh',suspiro:fem?'suspiro_f':'suspiro_m',asco:'asco'}[type]}
+function expr(type,who){if(!on||!type)return;const sm=sample(type,who);if(sm&&playS(sm,.9))return;const t=ctx.currentTime+.05,f=VOICE[who]||190;
+  if(type==='hmm'){voice(t,f,'m',.28,[1,.92],.5);voice(t+.34,f,'m',.3,[.95,1.05],.45)}
+  if(type==='risa'){for(let i=0;i<4;i++){breath(t+i*.16,.06,.06,1800);voice(t+i*.16,f,'a',.09,[1.15-i*.05,1.05-i*.05],.35)}}
+  if(type==='asombro'){breath(t,.18,.12,2000);voice(t+.05,f,'a',.32,[1,1.35],.35)}
+  if(type==='oh'){voice(t,f,'o',.4,[1.1,.9],.45)}
+  if(type==='suspiro'){breath(t,.9,.12,1200)}
+  if(type==='asco'){voice(t,f*.85,'u',.38,[1,.8],.45);breath(t,.3,.05,900)}
+  if(type==='eh'){voice(t,f,'e',.22,[1,1.2],.4)}
+  if(type==='ping'){[880,1320].forEach((fr,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=fr;env(g,t+i*.11,.01,.08,.18);o.connect(g).connect(master);o.start(t+i*.11);o.stop(t+i*.11+.3)})}
+  if(type==='error'){[440,330].forEach((fr,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=fr;env(g,t+i*.16,.01,.1,.16);o.connect(g).connect(master);o.start(t+i*.16);o.stop(t+i*.16+.3)})}}
+
+const sb=document.getElementById('sound'),vol=document.getElementById('vol'),rv=scenes[4].querySelector('#river');
+vol.value=.5;vol.oninput=()=>{if(master)master.gain.value=+vol.value};
+function toggle(){if(!ctx){ctx=new AudioContext();noiseBuf=ctx.createBuffer(1,ctx.sampleRate*4,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    master=ctx.createGain();master.gain.value=+vol.value;master.connect(ctx.destination);setInterval(tick,1000);loadSamples()}
+  on=!on;sb.setAttribute('aria-pressed',on);sb.textContent=on?'🔊 Sonido':'🔇 Sonido';
+  rv.setAttribute('aria-pressed',on);rv.textContent=on?'⏸ Pausar sonido':'▶ Escuchar al río';
+  if(on){ctx.resume();setAmb(visible)}else Object.values(amb).forEach(g=>g.gain.setTargetAtTime(0,ctx.currentTime,.3))}
+sb.onclick=toggle;
+rv.onclick=()=>{if(on&&cur==='rio'){toggle();return}if(!on)toggle();setAmb('rio')};
+
+
+build();
+</script>
+</body>
+</html>
