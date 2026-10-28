@@ -30,8 +30,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #7cc0
 /* Hojas (modo doble página) */
 .sheet{position:absolute;top:0;left:50%;width:50%;height:100%;transform-origin:left center;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.45,.05,.3,1)}
 .sheet.flipped{transform:rotateY(-180deg)}
-.face{position:absolute;inset:0;overflow:hidden;transition:visibility 0s .45s}
-.sheet.flipped .face.front,.sheet:not(.flipped) .face.back{visibility:hidden}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .face.back{transform:rotateY(180deg)}
 /* Modo una página */
 .book.single .sheet{display:none}
@@ -62,11 +61,15 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #7cc0
 .c-bl{left:2%;bottom:4%;align-items:flex-start;flex-direction:column-reverse}.c-br{right:2%;bottom:4%;align-items:flex-end;flex-direction:column-reverse}
 .panel.b .corner,.panel.c .corner{max-width:44%}
 .say{background:var(--bubble);color:#1d1a16;border:.45cqw solid #1d1a16;border-radius:2.6cqw;padding:.9cqw 1.8cqw;font-size:max(9px,2.7cqw);line-height:1.22;box-shadow:.3cqw .45cqw 0 rgba(0,0,0,.35);pointer-events:auto;margin:0;
-  opacity:0;transform:scale(.96);transition:.25s}
+  opacity:0;transform:scale(.96);transition:opacity .25s,transform .25s}
 .panel.b .say,.panel.c .say{font-size:max(9px,4.5cqw);border-width:.7cqw}
 .say[hidden]{display:none}
 .say.show{opacity:1;transform:none}
 .say.now{outline:.5cqw solid var(--accent);outline-offset:.3cqw}
+.say.show.past{opacity:.55}
+.scenep.reading .panel{filter:brightness(.5) saturate(.6);transition:filter .35s}
+.scenep.reading .panel.active{filter:none;box-shadow:0 0 0 .7cqw var(--accent)}
+.keys{font-size:2.1cqw;color:var(--muted);margin-left:auto}
 .say b{font-family:Bangers,cursive;font-weight:400;letter-spacing:.05em;font-size:1.1em;margin-right:.4em}
 .say.ia{background:var(--ia);color:var(--ia-ink);border-radius:.8cqw;font-family:"IBM Plex Mono",monospace;border-style:dashed}
 .say .acot{color:#5d554a;font-style:italic}
@@ -160,13 +163,14 @@ function mk(html,amb,cls){const p=document.createElement('section');p.className=
 /* 1 · Portada */
 mk(`<div class="bleed"><img src="img/portada.jpg" alt="Yeimi y Andrés frente al río Sinú al atardecer; en el reflejo del agua aparecen fragmentos de un chat."></div>
 <div class="cover-t"><div class="k">Cómic transmedia</div><h1>Lo que el río sabe</h1><p>Una historia sobre inteligencia artificial, escuela y territorio en Montería</p></div>
-<div class="cover-b">Maestría · Universidad de Córdoba · 2026</div>`,'rio','cover');
+<div class="cover-b">De León · Jara · Losada<br>Maestría · Universidad de Córdoba · 2026</div>`,'rio','cover');
 
 /* 2 · Presentación (interior de portada) */
 mk(`<div class="inner textpage"><h2>Antes de empezar</h2>
 <p>En un colegio público de Montería, un curso investiga por qué el caño de su barrio está contaminado. La IA les entrega un informe perfecto… con un dato inventado.</p>
-<ul><li><b>Pasa las páginas</b> con las flechas ◀ ▶, el teclado o deslizando el dedo.</li>
-<li><b>Toca cada viñeta</b> para que aparezcan los diálogos, o usa <b>Lectura automática</b>.</li>
+<ul><li><b>Diálogos:</b> pulsa <b>Espacio</b> (o toca la viñeta) para el siguiente; <b>↑</b> para volver al anterior. La viñeta que habla se ilumina.</li>
+<li><b>Páginas:</b> flechas <b>← →</b>, los botones ◀ ▶ o deslizando el dedo. Si ya leíste todo, Espacio también pasa la página.</li>
+<li>O deja que lo haga solo con <b>Lectura automática</b>.</li>
 <li><b>Activa el sonido</b> 🔊 para escuchar el ambiente y las reacciones de los personajes.</li>
 <li>En la escena 3 hay un <b>dato por descubrir</b>, y al final una <b>pregunta</b> que te toca a ti.</li></ul>
 <p class="small">Personajes: Profe Mariana · Yeimi · Andrés · Don Aurelio · y la IA, que vive en una tableta del colegio.</p></div><div class="pnum">2</div>`,'barrio');
@@ -179,6 +183,7 @@ S.forEach((s,i)=>{const n=i+1,solo=n===8;
   h+=`</div>`+(solo?['b']:['b','c']).map(x=>`<div class="panel ${x}"><img src="img/e${n}${x}.jpg" alt="${esc(s['alt'+x]||'')}" width="900" height="600" onerror="this.parentNode.classList.add('miss')"></div>`).join('')+`</div>`;
   h+=`<div class="row"><button class="pbtn next">Siguiente diálogo ▸</button>`;
   if(s.audio)h+=`<button class="pbtn alt" id="river" aria-pressed="false">▶ Escuchar al río</button><button class="pbtn alt" id="trx">Transcripción</button>`;
+  h+=`<span class="keys">Espacio: diálogo · ← →: página</span>`;
   if(s.links)h+=`<a class="pbtn alt" href="https://danielfer31.github.io/aprender-entre-pantallas/" target="_blank" rel="noopener">🎧 Podcast «Aprender entre pantallas»</a>`;
   h+=`</div>`;
   if(s.hot)h+=`<div class="pop" role="dialog" aria-label="Dato revelado"><button class="x" aria-label="Cerrar">✕</button><p>Lo que dijo la IA: «Según la Secretaría Ambiental, <mark>el 87 % de la contaminación del caño proviene del barrio Villa Esmeralda</mark>».</p><p><strong>⚠ Dato inventado.</strong> El barrio no existe y la cifra no tiene fuente. <strong>¿Cómo lo comprobarías?</strong> Busca la fuente original, pregunta a quien vive allí y compara con otra fuente.</p></div>`;
@@ -190,11 +195,19 @@ S.forEach((s,i)=>{const n=i+1,solo=n===8;
   const says=dl.map((d,j)=>{const [pn,c]=POS[n][j],e=document.createElement('p');e.className='say'+(d[3]?' ia':'');e.hidden=true;e.dataset.who=d[0];e.dataset.exp=(EXP[n]||[])[j]||'';
     e.innerHTML=`<b>${d[0]}</b>${d[2]?`<span class="acot">(${d[2]}) </span>`:''}${d[1]}`;pg.querySelector(`.panel.${pn} .c-${c}`).appendChild(e);return e});
   const nb=pg.querySelector('.next');let k=0;
-  const step=()=>{if(k<says.length){says.forEach(x=>x.classList.remove('now'));const e=says[k++];e.hidden=false;requestAnimationFrame(()=>e.classList.add('show','now'));expr(e.dataset.exp,e.dataset.who)}
-    if(k>=says.length)nb.textContent='Pasar página ▸'};
+  const focus=()=>{says.forEach((x,j)=>{x.classList.toggle('now',j===k-1);x.classList.toggle('past',j<k-1)});
+    pg.querySelectorAll('.panel').forEach(pn=>pn.classList.remove('active'));
+    const done=k>=says.length;pg.classList.toggle('reading',k>0&&!done);
+    if(k>0&&!done)says[k-1].closest('.panel').classList.add('active');
+    if(done)says.forEach(x=>x.classList.remove('past'));
+    nb.textContent=done?'Pasar página ▸':`Siguiente diálogo (${k+1}/${says.length}) ▸`};
+  const step=()=>{if(k<says.length){const e=says[k++];e.hidden=false;requestAnimationFrame(()=>e.classList.add('show'));expr(e.dataset.exp,e.dataset.who)}focus()};
+  pg._back=()=>{if(k<=0)return false;const e=says[--k];e.hidden=true;e.classList.remove('show','now','past');focus();return true};
+  pg._left=()=>says.length-k;
+  focus();
   nb.onclick=()=>{if(k>=says.length){turn(1);return}step()};
   pg.querySelectorAll('.panel img').forEach(im=>im.addEventListener('click',step));
-  pg._show=()=>{while(k<says.length)step()};pg._step=()=>{if(k>=says.length)return false;step();return true};
+  pg._show=()=>{while(k<says.length)step()};pg._done=()=>k>=says.length;pg._step=()=>{if(k>=says.length)return false;step();return true};
   pg.querySelectorAll('.pop .x').forEach(b=>b.onclick=()=>b.parentNode.classList.remove('open'));
   const hot=pg.querySelector('.hot');if(hot)hot.onclick=e=>{e.stopPropagation();pg.querySelector('.pop').classList.add('open')};
   const trx=pg.querySelector('#trx');if(trx)trx.onclick=()=>pg.querySelector('.pop.trx').classList.toggle('open');
@@ -212,6 +225,7 @@ mk(`<div class="bleed"><img src="img/final.jpg" alt="De noche, Mariana, Yeimi, A
 
 /* 13 · Créditos */
 mk(`<div class="inner textpage"><h2>Créditos</h2>
+<p><b>Autores:</b> Daniel Fernando De León Castro · Héctor Jamez Jara Londoño · Víctor Andrés Losada Bermeo.</p>
 <p><b>Historia, personajes, guion y prompts:</b> equipo del curso Transmedia y Contenidos Digitales en IA, Maestría, Universidad de Córdoba (2026).</p>
 <p><b>Ilustraciones:</b> generadas con IA (ChatGPT, vía Codex) a partir de fichas de personaje y prompts propios; cada viñeta fue revisada por el equipo.</p>
 <p class="small"><b>Sonidos:</b> Pixabay (licencia de contenido de Pixabay): «Calm River Ambience Loop», «Peaceful Morning Birds», «A gentle breeze wind 1», «Hmm reflexion male voice thinking», «Aha mhm mmm», «Girl soft laughing», «Sweet young woman laugh», «Old man laughing gradually», «Surprise scared girl gasp», «Gasp SFX», «Oh», «Female sigh», «Male sigh», «Eww»; recortados y normalizados por el equipo. Capas suaves sintetizadas en el navegador.</p>
@@ -232,7 +246,7 @@ function size(){const W=innerWidth,H=innerHeight-52,dbl=W>=900&&W>H*1.05;
   if(pw*cols>maxw){pw=maxw/cols;ph=pw/0.78}
   book.style.width=pw*cols+'px';book.style.height=ph+'px';return dbl}
 function build(){const dbl=size(),m=dbl?'double':'single';if(m===mode){place();return}mode=m;
-  sheets.forEach(s=>s.remove());sheets=[];single.innerHTML='';book.classList.toggle('single',!dbl);
+  sheets.forEach(s=>s.remove());sheets=[];single.innerHTML='';pos=Math.min(pos,N-1);book.classList.toggle('single',!dbl);
   if(dbl){for(let i=0;i<N;i+=2){const sh=document.createElement('div');sh.className='sheet';
       const f=document.createElement('div');f.className='face front';f.appendChild(PAGES[i]);sh.appendChild(f);
       if(PAGES[i+1]){const b=document.createElement('div');b.className='face back';b.appendChild(PAGES[i+1]);sh.appendChild(b)}
@@ -246,11 +260,18 @@ function place(){
   const vis=visiblePages();pg.textContent=vis.length?'Pág. '+vis.map(i=>i+1).join('–')+' / '+N:'';
   prev.disabled=pos<=0;next.disabled=mode==='double'?pos>=N:pos>=N-1;
   const amb=(vis.map(i=>PAGES[i].dataset.amb).filter(Boolean).pop())||'barrio';setAmb(amb)}
-function visiblePages(){return mode==='double'?[pos-1,pos].filter(i=>i>=0&&i<N):[pos]}
+function visiblePages(){return (mode==='double'?[pos-1,pos]:[pos]).filter(i=>i>=0&&i<N)}
 function turn(d){if(mode==='double'){pos=Math.max(0,Math.min(N,pos+2*d))}else{pos=Math.max(0,Math.min(N-1,pos+d))}place()}
 const prev=document.getElementById('prev'),next=document.getElementById('next'),pg=document.getElementById('pg');
 prev.onclick=()=>{stopAuto();turn(-1)};next.onclick=()=>{stopAuto();turn(1)};
-addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowRight'){stopAuto();turn(1)}if(e.key==='ArrowLeft'){stopAuto();turn(-1)}});
+function advance(){const vis=visiblePages().map(i=>PAGES[i]).filter(p=>p._step);const p=vis.find(p=>!p._done());if(p){p._step();return}if(!next.disabled)turn(1)}
+function retreat(){const vis=visiblePages().map(i=>PAGES[i]).filter(p=>p._back).reverse();for(const p of vis)if(p._back())return;turn(-1)}
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='A')return;
+  if(e.target.tagName==='BUTTON'&&(e.key===' '||e.key==='Enter'))return;
+  if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();stopAuto();turn(1)}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();stopAuto();turn(-1)}
+  else if(e.key===' '||e.key==='Enter'||e.key==='ArrowDown'){e.preventDefault();stopAuto();advance()}
+  else if(e.key==='ArrowUp'||e.key==='Backspace'){e.preventDefault();stopAuto();retreat()}});
 let tx=null;book.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
 book.addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>60){stopAuto();turn(dx<0?1:-1)}tx=null});
 addEventListener('resize',build);
